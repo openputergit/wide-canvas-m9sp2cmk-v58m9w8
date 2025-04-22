@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menteaszo - Mental Health Games</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #a8c0ff 0%, #3f2b96 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+        }
+        .breathing-circle {
+            transition: all 4s ease-in-out;
+            transform-origin: center;
+        }
+        .expanded {
+            transform: scale(1.5);
+        }
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .loading {
+            animation: rotate 2s linear infinite;
+        }
+        .goal-card {
+            transition: all 0.3s ease;
+        }
+        .goal-card:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="max-w-6xl mx-auto">
+        <!-- Navigation -->
+        <nav class="glass mb-8 p-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-white">Menteaszo Games</h1>
+                <button @click="toggleMenu" class="text-white">
+                    <i class="bi bi-list text-2xl"></i>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Games Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Breathing Game -->
+            <div class="glass p-6">
+                <h2 class="text-xl font-bold text-white mb-4">Breathing Rhythm</h2>
+                <div class="relative h-64 flex items-center justify-center">
+                    <div :class="['breathing-circle glass w-32 h-32 rounded-full', {'expanded': isBreathing}]"
+                         :style="{'background': 'rgba(255,255,255,0.2)'}">
+                        <div class="h-full flex items-center justify-center text-white text-lg">
+                            {{ breathingText }}
+                        </div>
+                    </div>
+                </div>
+                <button @click="toggleBreathing" 
+                        class="mt-4 w-full py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                    {{ isBreathingActive ? 'Stop' : 'Start' }} Breathing Exercise
+                </button>
+            </div>
+
+            <!-- Grounding Game -->
+            <div class="glass p-6">
+                <h2 class="text-xl font-bold text-white mb-4">Grounding Exercise</h2>
+                <div class="space-y-4">
+                    <div v-if="groundingStep <= 5" class="text-white">
+                        <p class="mb-2">Find {{ 6 - groundingStep }} things you can {{ groundingPrompt }}</p>
+                        <div class="flex gap-2">
+                            <input v-model="groundingInput" 
+                                   @keyup.enter="submitGrounding"
+                                   class="flex-1 p-2 rounded bg-white/10 border border-white/20"
+                                   placeholder="Type here...">
+                            <button @click="submitGrounding" 
+                                    class="px-4 py-2 bg-blue-500 rounded hover:bg-blue-600">
+                                Next
+                            </button>
+                        </div>
+                        <div class="mt-4">
+                            <p v-for="(item, index) in groundingItems" :key="index" 
+                               class="text-sm opacity-75">
+                               ✓ {{ item }}
+                            </p>
+                        </div>
+                    </div>
+                    <div v-else class="text-white text-center">
+                        <p>Great job! You completed the exercise.</p>
+                        <button @click="resetGrounding" 
+                                class="mt-4 px-4 py-2 bg-blue-500 rounded hover:bg-blue-600">
+                            Start Again
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Goals Section -->
+        <div class="mt-8 glass p-6">
+            <h2 class="text-xl font-bold text-white mb-4">Personal Development Goals</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div v-for="goal in goals" :key="goal.title" 
+                     class="glass p-4 goal-card cursor-pointer"
+                     @click="toggleGoal(goal)">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" 
+                               :checked="goal.selected"
+                               class="w-4 h-4">
+                        <span class="text-white">{{ goal.title }}</span>
+                    </div>
+                    <div v-if="goal.selected" class="mt-4 space-y-2">
+                        <div v-for="task in goal.tasks" :key="task"
+                             class="flex items-center gap-2 text-sm text-white/80">
+                            <input type="checkbox" class="w-3 h-3">
+                            <span>{{ task }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    isBreathingActive: false,
+                    isBreathing: false,
+                    breathingText: "Ready to start",
+                    groundingStep: 1,
+                    groundingInput: "",
+                    groundingItems: [],
+                    goals: [
+                        {
+                            title: "It Girl",
+                            selected: false,
+                            tasks: [
+                                "Practice self-care routine",
+                                "Build confidence through daily affirmations",
+                                "Develop personal style guide"
+                            ]
+                        },
+                        {
+                            title: "Minimalist",
+                            selected: false,
+                            tasks: [
+                                "Declutter one space daily",
+                                "Practice mindful consumption",
+                                "Create simplified routine"
+                            ]
+                        },
+                        {
+                            title: "Mindfulness Master",
+                            selected: false,
+                            tasks: [
+                                "Daily meditation practice",
+                                "Mindful eating exercises",
+                                "Gratitude journaling"
+                            ]
+                        }
+                    ]
+                }
+            },
+            computed: {
+                groundingPrompt() {
+                    const prompts = ["see", "touch", "hear", "smell", "taste"];
+                    return prompts[this.groundingStep - 1];
+                }
+            },
+            methods: {
+                toggleBreathing() {
+                    this.isBreathingActive = !this.isBreathingActive;
+                    if (this.isBreathingActive) {
+                        this.startBreathing();
+                    }
+                },
+                startBreathing() {
+                    const breathingCycle = () => {
+                        if (!this.isBreathingActive) return;
+                        
+                        // Inhale
+                        this.breathingText = "Inhale...";
+                        this.isBreathing = true;
+                        
+                        setTimeout(() => {
+                            if (!this.isBreathingActive) return;
+                            // Hold
+                            this.breathingText = "Hold...";
+                            
+                            setTimeout(() => {
+                                if (!this.isBreathingActive) return;
+                                // Exhale
+                                this.breathingText = "Exhale...";
+                                this.isBreathing = false;
+                                
+                                setTimeout(() => {
+                                    if (this.isBreathingActive) {
+                                        breathingCycle();
+                                    }
+                                }, 4000);
+                            }, 4000);
+                        }, 4000);
+                    };
+                    
+                    breathingCycle();
+                },
+                submitGrounding() {
+                    if (this.groundingInput.trim()) {
+                        this.groundingItems.push(this.groundingInput);
+                        this.groundingInput = "";
+                        if (this.groundingItems.length === (6 - this.groundingStep)) {
+                            this.groundingStep++;
+                            this.groundingItems = [];
+                        }
+                    }
+                },
+                resetGrounding() {
+                    this.groundingStep = 1;
+                    this.groundingItems = [];
+                    this.groundingInput = "";
+                },
+                toggleGoal(goal) {
+                    goal.selected = !goal.selected;
+                }
+            }
+        }).mount('#app')
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
